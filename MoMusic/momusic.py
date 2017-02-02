@@ -32,19 +32,19 @@ def find_fav_artists(sp, fav_artists):
             fav_artists.add(item['artists'][0]['name'])
     
 
-def get_new_songs(): #sp, fav_artists, song_cache):
+def get_new_songs(): #sp, fav_artists, seen_songs):
     new_songs = sp.new_releases()
     dope = []
     for s in new_songs['albums']['items']:
         artist = s['artists'][0]['name']
         song_title = s['name']
-        if artist in fav_artists and song_title not in song_cache:
+        if artist in fav_artists and song_title not in seen_songs:
             url = s['external_urls']['spotify']
             dope.append((artist, song_title, url))
-    print fav_artists
-    # for d in dope:
-    #     text = d[0] + ' just released a new song: ' + d[1] + '\nCheck it out at ' + d[2]
-    #     send_sms(client, text)
+            seen_songs.add(song_title)  
+    for d in dope:
+        text = d[0] + ' just released a new song: ' + d[1] + '\nCheck it out at ' + d[2]
+        send_sms(client, text)
 
 
 @app.route('/')
@@ -85,8 +85,7 @@ if __name__ == "__main__":
     sp = spotipy.Spotify(auth=token)
     fav_artists = {"Drake", "R3hab"}
     find_fav_artists(sp, fav_artists)
-    duration = 0
-    song_cache = {"blah"}
+    seen_songs = set()
 
     app.run(host='0.0.0.0', port=port)
 
