@@ -28,14 +28,16 @@ def send_sms(client, msg):
         to=config.MY_NUMBER,
         from_=config.TWILIO_NUMBER)
 
+
 def get_curr_songs(seen_songs):
     saved_tracks = sp.current_user_saved_tracks(limit=50)
     for song in saved_tracks['items']:
         track = song['track']
 
-        # add tuple w song name, artist name
-        seen_songs.add((track['name'], track['artists'][0]['name']))
-
+        # add tuple w artist name, song title
+        seen_songs.add((track['artists'][0]['name'], track['name']))
+    
+    get_new_songs()
 
 
 def find_fav_artists(sp, fav_artists):  
@@ -47,37 +49,25 @@ def find_fav_artists(sp, fav_artists):
             fav_artists.add(item['artists'][0]['name'])
     
 
-def get_new_songs(): #sp, fav_artists, seen_songs):
+def get_new_songs(): 
     new_songs = sp.new_releases()
     dope = []
-    print fav_artists
     for artist in fav_artists:
         print artist
         payload = {'tag': 'new', 'type': 'track', 'limit':'3'}
         query = "https://api.spotify.com/v1/search?q=" + artist
         r = requests.get(query, params=payload)
         data = r.json()
-        print data
         #print data['tracks']['items'][0].keys()           
-        print 'topics ' + len(data['tracks']['items']) 
+        # print 'topics ' + len(data['tracks']['items']) 
         for topic in data['tracks']['items']:
-            print topic
             song_name = topic['name']
-            url = topic['external_urls']['spotify']
-            dope.append(artist, song_name, url)
-        print 'finished with ' + artist
-            #if song_name not in seen_songs:
+            tup = (artist, song_name)
             
-
-    # for s in new_songs['albums']['items']:
-    #     artist = s['artists'][0]['name']
-    #     song_title = s['name']
-    #     if artist in fav_artists and song_title not in seen_songs:
-    #         url = s['external_urls']['spotify']
-    #         dope.append((artist, song_title, url))
-
-    #         # add tuple w song name, artist name
-    #         seen_songs.add((song_title, artist))  
+            if tup not in seen_songs:
+                url = topic['external_urls']['spotify']
+                dope.append((artist, song_name, url))
+        print 'finished with ' + artist
     print dope
     # for d in dope:
     #     text = d[0] + ' just released a new song: ' + d[1] + '\nCheck it out at ' + d[2]
@@ -96,7 +86,7 @@ def initialize():
     scheduler.start()
     scheduler.add_job(
         func=get_new_songs,
-        trigger=IntervalTrigger(seconds=20),
+        trigger=IntervalTrigger(seconds=2),
         id='momusic',
         name='momusic',
         replace_existing=True
