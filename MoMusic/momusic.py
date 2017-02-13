@@ -28,34 +28,57 @@ def send_sms(client, msg):
         to=config.MY_NUMBER,
         from_=config.TWILIO_NUMBER)
 
+def get_curr_songs(seen_songs):
+    saved_tracks = sp.current_user_saved_tracks(limit=50)
+    for song in saved_tracks['items']:
+        track = song['track']
+
+        # add tuple w song name, artist name
+        seen_songs.add((track['name'], track['artists'][0]['name']))
+
+
 
 def find_fav_artists(sp, fav_artists):  
     ranges = ['short_term', 'medium_term']
 
     for range in ranges:
-        results = sp.current_user_top_tracks(time_range=range, limit=20)
+        results = sp.current_user_top_tracks(time_range=range, limit=50)
         for i, item in enumerate(results['items']):
             fav_artists.add(item['artists'][0]['name'])
     
 
 def get_new_songs(): #sp, fav_artists, seen_songs):
     new_songs = sp.new_releases()
-    
-    for i, artist in enumerate(fav_artists):
-        print i, artist
+    dope = []
+    print fav_artists
+    for artist in fav_artists:
+        print artist
         payload = {'tag': 'new', 'type': 'track', 'limit':'3'}
         query = "https://api.spotify.com/v1/search?q=" + artist
         r = requests.get(query, params=payload)
-        data = r.json()            
+        data = r.json()
+        print data
+        #print data['tracks']['items'][0].keys()           
+        print 'topics ' + len(data['tracks']['items']) 
+        for topic in data['tracks']['items']:
+            print topic
+            song_name = topic['name']
+            url = topic['external_urls']['spotify']
+            dope.append(artist, song_name, url)
+        print 'finished with ' + artist
+            #if song_name not in seen_songs:
+            
 
-    dope = []
-    for s in new_songs['albums']['items']:
-        artist = s['artists'][0]['name']
-        song_title = s['name']
-        if artist in fav_artists and song_title not in seen_songs:
-            url = s['external_urls']['spotify']
-            dope.append((artist, song_title, url))
-            seen_songs.add(song_title)  
+    # for s in new_songs['albums']['items']:
+    #     artist = s['artists'][0]['name']
+    #     song_title = s['name']
+    #     if artist in fav_artists and song_title not in seen_songs:
+    #         url = s['external_urls']['spotify']
+    #         dope.append((artist, song_title, url))
+
+    #         # add tuple w song name, artist name
+    #         seen_songs.add((song_title, artist))  
+    print dope
     # for d in dope:
     #     text = d[0] + ' just released a new song: ' + d[1] + '\nCheck it out at ' + d[2]
     #     send_sms(client, text)
@@ -73,7 +96,7 @@ def initialize():
     scheduler.start()
     scheduler.add_job(
         func=get_new_songs,
-        trigger=IntervalTrigger(seconds=2),
+        trigger=IntervalTrigger(seconds=20),
         id='momusic',
         name='momusic',
         replace_existing=True
@@ -100,8 +123,8 @@ if __name__ == "__main__":
     sp = spotipy.Spotify(auth=token)
     fav_artists = {"Drake", "R3hab"}
     find_fav_artists(sp, fav_artists)
-    print fav_artists
     seen_songs = set()
+    get_curr_songs(seen_songs)
 
     app.run(host='0.0.0.0', port=port)
 
