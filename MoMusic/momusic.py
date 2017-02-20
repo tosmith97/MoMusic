@@ -8,9 +8,6 @@ import urllib
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-#test
-import logging
-
 import os
 from flask import Flask, request, session, g, redirect, flash
 
@@ -37,7 +34,7 @@ def get_curr_songs(seen_songs):
         # add tuple w artist name, song title
         seen_songs.add((track['artists'][0]['name'], track['name']))
     
-    get_new_songs()
+    get_new_songs(send=False)
 
 
 def find_fav_artists(sp, fav_artists):  
@@ -49,17 +46,15 @@ def find_fav_artists(sp, fav_artists):
             fav_artists.add(item['artists'][0]['name'])
     
 
-def get_new_songs(): 
+def get_new_songs(send=True): 
     new_songs = sp.new_releases()
     dope = []
     for artist in fav_artists:
-        print artist
+        print 'Name of artist:', artist
         payload = {'tag': 'new', 'type': 'track', 'limit':'3'}
         query = "https://api.spotify.com/v1/search?q=" + artist
         r = requests.get(query, params=payload)
         data = r.json()
-        #print data['tracks']['items'][0].keys()           
-        # print 'topics ' + len(data['tracks']['items']) 
         for topic in data['tracks']['items']:
             song_name = topic['name']
             tup = (artist, song_name)
@@ -67,11 +62,13 @@ def get_new_songs():
             if tup not in seen_songs:
                 url = topic['external_urls']['spotify']
                 dope.append((artist, song_name, url))
-        print 'finished with ' + artist
-    print dope
-    # for d in dope:
-    #     text = d[0] + ' just released a new song: ' + d[1] + '\nCheck it out at ' + d[2]
-    #     send_sms(client, text)
+                seen_songs.add(tup)
+        print 'Finished with ' + artist
+    print 'songs', dope
+    if send:
+        for d in dope:
+            text = d[0] + ' just released a new song: ' + d[1] + '\nCheck it out at ' + d[2]
+            send_sms(client, text)
 
 
 @app.route('/')
@@ -86,7 +83,7 @@ def initialize():
     scheduler.start()
     scheduler.add_job(
         func=get_new_songs,
-        trigger=IntervalTrigger(seconds=2),
+        trigger=IntervalTrigger(hours=6),
         id='momusic',
         name='momusic',
         replace_existing=True
