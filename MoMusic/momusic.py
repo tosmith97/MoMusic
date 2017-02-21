@@ -5,6 +5,8 @@ import atexit
 import requests
 import urllib
 
+import concurrent.futures
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -24,6 +26,24 @@ def send_sms(client, msg):
     message = client.messages.create(body=msg,
         to=config.MY_NUMBER,
         from_=config.TWILIO_NUMBER)
+
+
+def get_new_song_from_artist(artist, seen_songs, dope):
+
+    print 'Name of artist:', artist
+    payload = {'tag': 'new', 'type': 'track', 'limit':'3'}
+    query = "https://api.spotify.com/v1/search?q=" + artist
+    r = requests.get(query, params=payload)
+    data = r.json()
+    for topic in data['tracks']['items']:
+        song_name = topic['name']
+        tup = (artist, song_name)
+                
+        if tup not in seen_songs:
+            url = topic['external_urls']['spotify']
+            dope.append((artist, song_name, url))
+            seen_songs.add(tup)
+    print 'Finished with ' + artist
 
 
 def get_curr_songs(seen_songs):
@@ -49,21 +69,10 @@ def find_fav_artists(sp, fav_artists):
 def get_new_songs(send=True): 
     new_songs = sp.new_releases()
     dope = []
-    for artist in fav_artists:
-        print 'Name of artist:', artist
-        payload = {'tag': 'new', 'type': 'track', 'limit':'3'}
-        query = "https://api.spotify.com/v1/search?q=" + artist
-        r = requests.get(query, params=payload)
-        data = r.json()
-        for topic in data['tracks']['items']:
-            song_name = topic['name']
-            tup = (artist, song_name)
-            
-            if tup not in seen_songs:
-                url = topic['external_urls']['spotify']
-                dope.append((artist, song_name, url))
-                seen_songs.add(tup)
-        print 'Finished with ' + artist
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+         future_to_artist = {pool.submit(get_new_song_from_artist, artist, seen_songs, dope): artist for artist in fav_artists}
+
     print 'songs', dope
     if send:
         for d in dope:
