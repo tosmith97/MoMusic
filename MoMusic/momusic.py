@@ -29,7 +29,6 @@ def send_sms(client, msg):
 
 
 def get_new_song_from_artist(artist, seen_songs, dope):
-
     print 'Name of artist:', artist
     payload = {'tag': 'new', 'type': 'track', 'limit':'3'}
     query = "https://api.spotify.com/v1/search?q=" + artist
@@ -92,7 +91,7 @@ def initialize():
     scheduler.start()
     scheduler.add_job(
         func=get_new_songs,
-        trigger=IntervalTrigger(hours=6),
+        trigger=IntervalTrigger(hours=1),
         id='momusic',
         name='momusic',
         replace_existing=True
@@ -102,7 +101,6 @@ def initialize():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-
 
     # Twilio info
     account_sid = config.TWILIO_ACCOUNT_SID
