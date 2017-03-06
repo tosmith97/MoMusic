@@ -33,17 +33,20 @@ def get_new_song_from_artist(artist, seen_songs, dope):
     payload = {'tag': 'new', 'type': 'track', 'limit':'3'}
     query = "https://api.spotify.com/v1/search?q=" + artist
     r = requests.get(query, params=payload)
-    data = r.json()
-    for topic in data['tracks']['items']:
-        song_name = topic['name']
-        tup = (artist, song_name)
-                
-        if tup not in seen_songs:
-            url = topic['external_urls']['spotify']
-            dope.append((artist, song_name, url))
-            seen_songs.add(tup)
-    print 'Finished with ' + artist
-
+    try:
+        data = r.json()
+        for topic in data['tracks']['items']:
+            song_name = topic['name']
+            tup = (artist, song_name)
+                    
+            if tup not in seen_songs:
+                url = topic['external_urls']['spotify']
+                dope.append((artist, song_name, url))
+                seen_songs.add(tup)
+        print 'Finished with ' + artist
+    
+    except ValueError:
+        print "Error with json"
 
 def get_curr_songs(seen_songs):
     saved_tracks = sp.current_user_saved_tracks(limit=50)
@@ -66,17 +69,25 @@ def find_fav_artists(sp, fav_artists):
     
 
 def get_new_songs(send=True): 
+    print 'Getting new songs...'
     new_songs = sp.new_releases()
     dope = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
          future_to_artist = {pool.submit(get_new_song_from_artist, artist, seen_songs, dope): artist for artist in fav_artists}
 
+    print 'Saving new songs...'
+    config.seen_songs = seen_songs.copy()
+    print 'new seen songs: ', config.seen_songs
     print 'songs', dope
     if send:
         for d in dope:
             text = d[0] + ' just released a new song: ' + d[1] + '\nCheck it out at ' + d[2]
             send_sms(client, text)
+
+def ping():
+    r = requests.get("https://momusiq.herokuapp.com/")
+    print r.content
 
 
 @app.route('/')
@@ -92,8 +103,15 @@ def initialize():
     scheduler.add_job(
         func=get_new_songs,
         trigger=IntervalTrigger(hours=1),
-        id='momusic',
-        name='momusic',
+        id='get_new_songs',
+        name='get_new_songs',
+        replace_existing=True
+    )
+    scheduler.add_job(
+        func=ping,
+        trigger=IntervalTrigger(minutes=25),
+        id='ping',
+        name='ping',
         replace_existing=True
     )
     # shut down when exit app
@@ -117,8 +135,8 @@ if __name__ == "__main__":
     sp = spotipy.Spotify(auth=token)
     fav_artists = {"Drake", "R3hab"}
     find_fav_artists(sp, fav_artists)
-    seen_songs = set()
+    seen_songs = config.seen_songs.copy()
+    print seen_songs
     get_curr_songs(seen_songs)
 
     app.run(host='0.0.0.0', port=port)
-
