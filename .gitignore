@@ -1,0 +1,11 @@
+*.pyc
+.cache-22gfmzpzyjgmxov5usnqrzkci
+.cache-plswork
+config.py
+
+node_modules/
+data/
+
+.env
+.dockerignore
+.DS_Store
