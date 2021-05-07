@@ -33,7 +33,7 @@
     "random-animal-name-generator": "^0.1.1",
     "spotify-web-api-node": "^4.0.0",
     "twilio": "^3.33.4",
-    "underscore": "^1.9.1"
+    "underscore": "^1.12.1"
   },
   "devDependencies": {},
   "scripts": {
